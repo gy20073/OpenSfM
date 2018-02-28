@@ -4,15 +4,31 @@ from opensfm import dataset
 from opensfm import features
 import numpy as np
 
+
+def return_longest_recon(reconstruction):
+    maxi = 0
+
+    def num_images(recon):
+        return len(recon.shots.keys())
+
+    for i, recon in enumerate(reconstruction):
+        if num_images(recon) > num_images(reconstruction[maxi]):
+            maxi = i
+    return reconstruction[maxi]
+
 def read_in_data(data_path, mask_path):
     data = dataset.DataSet(data_path)
     reconstruction = data.load_reconstruction()
+    reconstruction = [return_longest_recon(reconstruction)]
     graph = data.load_tracks_graph()
 
     # first read in all images
     mask_dict={}
-    for imageid in reconstruction[0].shots.keys():
-        mask_dict[imageid] = data.seg_as_array(imageid, mask_path)
+    for track_id in reconstruction[0].points:
+        for imageid in graph[track_id]:
+            if imageid not in mask_dict:
+                mask_dict[imageid] = data.seg_as_array(imageid, mask_path)
+
     return (reconstruction, graph, mask_dict)
     
 def check_a_point(point, mask):
@@ -59,23 +75,8 @@ def evaluate_all_points(reconstruction, masks, graph):
             errors.append(rec.points[track_id].reprojection_error)
     return np.mean(errors)
 
-def return_longest_recon(reconstruction):
-    maxi = 0
-
-    def num_images(recon):
-        return len(recon.shots.keys())
-
-    for i, recon in enumerate(reconstruction):
-        if num_images(recon) > num_images(reconstruction[maxi]):
-            maxi = i
-    return reconstruction[maxi]
-
-
 def evaluate(data_path, mask_path):
     reconstruction, graph, mask_dict = read_in_data(data_path, mask_path)
-    if len(reconstruction) == 0:
-        return 1e9
-    reconstruction = [return_longest_recon(reconstruction)]
 
     return evaluate_all_points(reconstruction, mask_dict, graph)
     
