@@ -59,8 +59,24 @@ def evaluate_all_points(reconstruction, masks, graph):
             errors.append(rec.points[track_id].reprojection_error)
     return np.mean(errors)
 
+def return_longest_recon(reconstruction):
+    maxi = 0
+
+    def num_images(recon):
+        return len(recon.shots.keys())
+
+    for i, recon in enumerate(reconstruction):
+        if num_images(recon) > num_images(reconstruction[maxi]):
+            maxi = i
+    return reconstruction[maxi]
+
+
 def evaluate(data_path, mask_path):
     reconstruction, graph, mask_dict = read_in_data(data_path, mask_path)
+    if len(reconstruction) == 0:
+        return 1e9
+    reconstruction = [return_longest_recon(reconstruction)]
+
     return evaluate_all_points(reconstruction, mask_dict, graph)
     
 if __name__ == "__main__":
